@@ -205,25 +205,7 @@ go test ./tests/...
 
 ## Implementation Notes
 
-This is a direct translation from the original Pascal SGP4/SDP4 implementation by Dr. TS Kelso. The code maintains the same algorithms and numerical precision as the original while taking advantage of Go's type safety and error handling.
-
-### Key Differences from Original
-
-1. **No Global Variables**: All state is encapsulated in structs
-2. **Public Fields**: All important fields are publicly accessible (capitalized)
-3. **Error Handling**: Proper Go-style error handling instead of returning 0.0
-4. **Type Safety**: Compile-time type checking
-5. **Convenience Methods**: Added getter methods for commonly needed values
-
-### User-Friendly Features
-
-Unlike some other SGP4 implementations, this package ensures that:
-
-- **All TLE fields are publicly accessible** (no hidden fields like `jdsatepoch`)
-- **All satellite data fields are publicly accessible**
-- **Multiple propagation methods** for different use cases
-- **Comprehensive convenience methods** for common operations
-- **Clear documentation** of all accessible fields and methods
+This is a direct translation from the original SGP4/SDP4 implementation by David vallado and Dr. TS Kelso. The code maintains the same algorithms and numerical precision as the original while taking advantage of Go's type safety and error handling.
 
 ## License
 
@@ -231,6 +213,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Original SGP4/SDP4 implementation by Dr. TS Kelso
+- Original SGP4/SDP4 implementation by David Vallado & Dr. TS Kelso
 - Based on NORAD SGP4 orbital models
 - Translation maintains fidelity to the original algorithms
