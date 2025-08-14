@@ -50,6 +50,8 @@ func main() {
 
 	fmt.Printf("\nPropagation Examples:\n")
 
+	// Demonstrate the new simplified API
+	// Default: Earth radii
 	pos1, vel1, err := sgp4go.PropagateSatellite(tle, tle.JulianEpoch)
 	if err != nil {
 		fmt.Printf("Error propagating satellite: %v\n", err)
@@ -57,11 +59,15 @@ func main() {
 	}
 	fmt.Printf("Position at epoch (Earth radii): X=%f, Y=%f, Z=%f\n", pos1.X, pos1.Y, pos1.Z)
 	fmt.Printf("Velocity at epoch (Earth radii/min): X=%f, Y=%f, Z=%f\n", vel1.X, vel1.Y, vel1.Z)
-	// Convert to kilometers
-	sgp4go.ConvertPositionToKilometers(&pos1)
-	sgp4go.ConvertVelocityToKilometersPerSecond(&vel1)
-	fmt.Printf("Position at epoch (kilometers): X=%f, Y=%f, Z=%f\n", pos1.X, pos1.Y, pos1.Z)
-	fmt.Printf("Velocity at epoch (km/s): X=%f, Y=%f, Z=%f\n", vel1.X, vel1.Y, vel1.Z)
+
+	// With "km" parameter: kilometers
+	pos1Km, vel1Km, err := sgp4go.PropagateSatellite(tle, tle.JulianEpoch, "km")
+	if err != nil {
+		fmt.Printf("Error propagating satellite: %v\n", err)
+		return
+	}
+	fmt.Printf("Position at epoch (kilometers): X=%f, Y=%f, Z=%f\n", pos1Km.X, pos1Km.Y, pos1Km.Z)
+	fmt.Printf("Velocity at epoch (km/s): X=%f, Y=%f, Z=%f\n", vel1Km.X, vel1Km.Y, vel1Km.Z)
 
 	jnow := sgp4go.JulianToTimeAstronomical(tle.JulianEpoch)
 	fmt.Println("jnow", tle.JulianEpoch)
@@ -78,7 +84,8 @@ func main() {
 
 	// Convert to kilometers using convenience functions - FIXED: use 92min time instead of now
 	time92min := jnow.Add(time.Minute * 92)
-	pos2Km, vel2Km, err := sgp4go.PropagateSatelliteFromTimeInKilometers(tle, time92min)
+	jd92min := sgp4go.TimeToJulianDate(time92min)
+	pos2Km, vel2Km, err := sgp4go.PropagateSatellite(tle, jd92min, "km")
 	if err != nil {
 		fmt.Printf("Error propagating satellite: %v\n", err)
 		return

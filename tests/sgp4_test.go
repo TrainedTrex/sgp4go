@@ -210,7 +210,7 @@ func TestSGP4Validation(t *testing.T) {
 	}
 
 	// Test 1: Position at epoch
-	posEpoch, velEpoch, err := sgp4go.PropagateSatelliteInKilometers(tle, tle.JulianEpoch)
+	posEpoch, velEpoch, err := sgp4go.PropagateSatellite(tle, tle.JulianEpoch, "km")
 	if err != nil {
 		t.Fatalf("PropagateSatellite at epoch failed: %v", err)
 	}
@@ -249,7 +249,7 @@ func TestSGP4Validation(t *testing.T) {
 	time92min := epochTime.Add(time.Minute * 92)
 	jd92min := sgp4go.TimeToJulianDate(time92min)
 
-	pos92min, vel92min, err := sgp4go.PropagateSatelliteInKilometers(tle, jd92min)
+	pos92min, vel92min, err := sgp4go.PropagateSatellite(tle, jd92min, "km")
 	if err != nil {
 		t.Fatalf("PropagateSatellite at 92min failed: %v", err)
 	}

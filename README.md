@@ -6,8 +6,8 @@ A Go implementation of the NORAD SGP4/SDP4 orbital propagation models, translate
 
 - **Complete SGP4/SDP4 Implementation**: Full translation of the NORAD orbital models
 - **TLE Parsing**: Parse standard Two-Line Element sets
-- **Multiple Propagation Methods**: Support for Julian dates, Go time.Time, and minutes since epoch
-- **Units**: Returns both Earth radii and kilometers
+- **Simple Propagation API**: Single function with optional units parameter
+- **Flexible Units**: Optional units parameter - Earth radii (default) or kilometers
 - **Testing**: Unit tests and validation against known results
 - **Go Idioms**: Go error handling, type safety, and modern Go coding patterns
 
@@ -48,15 +48,18 @@ func main() {
     // Propagate using different methods
     now := time.Now()
     
-    // Method 1: Using Go time.Time (returns Earth radii)
-    pos, vel, err := sgp4.PropagateSatelliteFromTime(tle, now)
+    // Convert time to Julian date for propagation
+    jd := sgp4.TimeToJulianDate(now)
+    
+    // Method 1: Earth radii (default)
+    pos, vel, err := sgp4.PropagateSatellite(tle, jd)
     if err != nil {
         panic(err)
     }
     fmt.Printf("Position (Earth radii): X=%f, Y=%f, Z=%f\n", pos.X, pos.Y, pos.Z)
     
-    // Method 2: Using Go time.Time with automatic conversion to kilometers
-    posKm, velKm, err := sgp4.PropagateSatelliteFromTimeInKilometers(tle, now)
+    // Method 2: Kilometers (with "km" parameter)
+    posKm, velKm, err := sgp4.PropagateSatellite(tle, jd, "km")
     if err != nil {
         panic(err)
     }
@@ -140,22 +143,14 @@ func ParseFloat(s string) (float64, error)
 #### Satellite Data Conversion
 ```go
 func ConvertSatelliteData(tle *TLE) (*SatelliteData, error)
-func CalculateXKE() float64
 ```
 
 #### Propagation (High-Level)
 ```go
-func PropagateSatellite(tle *TLE, time float64) (Vector, Vector, error)
-func PropagateSatelliteFromTime(tle *TLE, t time.Time) (Vector, Vector, error)
-func PropagateSatelliteFromMinutes(tle *TLE, minutesSinceEpoch float64) (Vector, Vector, error)
+func PropagateSatellite(tle *TLE, time float64, units ...string) (Vector, Vector, error)
 ```
 
-#### Propagation in Kilometers (High-Level)
-```go
-func PropagateSatelliteInKilometers(tle *TLE, time float64) (Vector, Vector, error)
-func PropagateSatelliteFromTimeInKilometers(tle *TLE, t time.Time) (Vector, Vector, error)
-func PropagateSatelliteFromMinutesInKilometers(tle *TLE, minutesSinceEpoch float64) (Vector, Vector, error)
-```
+**Note:** The `units` parameter is optional. Pass `"km"` to get results in kilometers, or omit for Earth radii (default). For time.Time objects, use `TimeToJulianDate()` to convert first.
 
 #### Propagation (Low-Level)
 ```go
@@ -225,7 +220,7 @@ go test ./tests/...
 
 ## Implementation Notes
 
-This is a direct translation from the original SGP4/SDP4 implementation by David vallado and Dr. TS Kelso. The code maintains the same algorithms and numerical operations as the original while taking advantage of Go's type safety and error handling.
+This is a direct translation from the original SGP4/SDP4 implementation by David Vallado and Dr. TS Kelso. The code maintains the same algorithms and numerical operations as the original while taking advantage of Go's type safety and error handling.
 
 ## License
 

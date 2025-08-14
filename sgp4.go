@@ -3,7 +3,6 @@ package sgp4go
 import (
 	"fmt"
 	"math"
-	"time"
 )
 
 // SGP4 propagates a satellite's position and velocity using the SGP4 model
@@ -115,7 +114,8 @@ func SGP4NearEarth(tsince float64, sat *SatelliteData) (Vector, Vector, error) {
 		x7thm1 = 7*theta2 - 1
 
 		if isimp == 1 {
-			// Simplified model for low perigee
+			// Simplified model - skip complex coefficient calculations
+			// This corresponds to the goto 90 in the original code
 		} else {
 			c1sq = c1 * c1
 			d2 = 4 * aodp * tsi * c1sq
@@ -143,7 +143,11 @@ func SGP4NearEarth(tsince float64, sat *SatelliteData) (Vector, Vector, error) {
 	templ := t2cof * tsq
 
 	if isimp == 1 {
-		// Simplified model
+		// Simplified model - skip complex secular updates
+		// This corresponds to the goto 110 in the original code
+		// For low perigee satellites, we use linear variation in sqrt a
+		// and quadratic variation in mean anomaly, dropping c3, delta omega,
+		// and delta m terms
 	} else {
 		delomg := omgcof * tsince
 		delm := xmcof * (Power(1+eta*math.Cos(xmdf), 3) - delmo)
@@ -257,11 +261,10 @@ func SGP4NearEarth(tsince float64, sat *SatelliteData) (Vector, Vector, error) {
 func SDP4(tsince float64, sat *SatelliteData) (Vector, Vector, error) {
 	// This is a placeholder for the deep-space model
 	// The full SDP4 implementation is quite complex and would require
-	// significant additional code. For now, we'll return an error
+	// significant additional code. For now, keep it close to earth, this returns an error
 	return Vector{}, Vector{}, fmt.Errorf("SDP4 deep-space model not yet implemented")
 }
 
-// defineDerivedConstants calculates derived constants for SGP4
 func defineDerivedConstants(sat *SatelliteData) {
 	sat.XKE = math.Sqrt(3600.0 * GE / Cube(XKMPER))
 	sat.QOMS2T = Power(QO-S, 4)
@@ -282,71 +285,25 @@ func SGP(time float64, sat *SatelliteData) (Vector, Vector, error) {
 
 // PropagateSatellite is a high-level convenience function that takes a TLE and time
 // and returns the satellite's position and velocity at that time
-func PropagateSatellite(tle *TLE, time float64) (Vector, Vector, error) {
+// units can be "km" for kilometers or any other value for Earth radii (default)
+func PropagateSatellite(tle *TLE, time float64, units ...string) (Vector, Vector, error) {
 	if tle == nil {
 		return Vector{}, Vector{}, fmt.Errorf("TLE cannot be nil")
 	}
 
-	// Convert TLE to satellite data
 	sat, err := ConvertSatelliteData(tle)
 	if err != nil {
 		return Vector{}, Vector{}, fmt.Errorf("failed to convert TLE: %v", err)
 	}
 
-	// Use the high-level SGP function which automatically chooses SGP4 or SDP4
-	return SGP(time, sat)
-}
-
-// PropagateSatelliteFromTime is a function that takes a TLE and a Go time.Time
-// and returns the satellite's position and velocity at that time
-func PropagateSatelliteFromTime(tle *TLE, t time.Time) (Vector, Vector, error) {
-	if tle == nil {
-		return Vector{}, Vector{}, fmt.Errorf("TLE cannot be nil")
-	}
-
-	// Convert time to Julian date
-	jd := TimeToJulianDate(t)
-
-	// Propagate using Julian date
-	return PropagateSatellite(tle, jd)
-}
-
-// PropagateSatelliteFromMinutes is a convenience function that takes a TLE and minutes since epoch
-// and returns the satellite's position and velocity at that time
-func PropagateSatelliteFromMinutes(tle *TLE, minutesSinceEpoch float64) (Vector, Vector, error) {
-	if tle == nil {
-		return Vector{}, Vector{}, fmt.Errorf("TLE cannot be nil")
-	}
-
-	// Convert TLE to satellite data
-	sat, err := ConvertSatelliteData(tle)
-	if err != nil {
-		return Vector{}, Vector{}, fmt.Errorf("failed to convert TLE: %v", err)
-	}
-
-	// Use SGP4 directly with minutes since epoch
-	return SGP4(minutesSinceEpoch, sat)
-}
-
-// PropagateSatelliteInKilometers is a function that returns position and velocity in kilometers
-func PropagateSatelliteInKilometers(tle *TLE, time float64) (Vector, Vector, error) {
-	pos, vel, err := PropagateSatellite(tle, time)
+	pos, vel, err := SGP(time, sat)
 	if err != nil {
 		return Vector{}, Vector{}, err
 	}
 
-	ConvertPositionAndVelocityToKilometers(&pos, &vel)
-	return pos, vel, nil
-}
-
-// PropagateSatelliteFromTimeInKilometers is a function that takes a TLE and a Go time.Time
-// and returns the satellite's position and velocity in kilometers
-func PropagateSatelliteFromTimeInKilometers(tle *TLE, t time.Time) (Vector, Vector, error) {
-	pos, vel, err := PropagateSatelliteFromTime(tle, t)
-	if err != nil {
-		return Vector{}, Vector{}, err
+	if len(units) > 0 && units[0] == "km" {
+		ConvertPositionAndVelocityToKilometers(&pos, &vel)
 	}
 
-	ConvertPositionAndVelocityToKilometers(&pos, &vel)
 	return pos, vel, nil
 }
