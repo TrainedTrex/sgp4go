@@ -1,6 +1,6 @@
 # SGP4Go
 
-A Go implementation of the NORAD SGP4/SDP4 orbital propagation models, translated from the original code by David Vallado & Dr. TS Kelso.
+Yet another SGP4 port. This is a Go implementation of the NORAD SGP4/SDP4 orbital propagation models, translated from the original code by David Vallado & Dr. TS Kelso.
 
 > Beta version
 
