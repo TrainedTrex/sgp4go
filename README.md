@@ -2,6 +2,8 @@
 
 A Go implementation of the NORAD SGP4/SDP4 orbital propagation models, translated from the original code by David Vallado & Dr. TS Kelso.
 
+> Beta version
+
 ## Features
 
 - **Complete SGP4/SDP4 Implementation**: Full translation of the NORAD orbital models
