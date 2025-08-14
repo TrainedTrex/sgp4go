@@ -18,6 +18,7 @@ type TLE struct {
 	SatelliteNumber   string
 	Epoch             float64
 	JulianEpoch       float64
+	GregorianEpoch    time.Time
 	MeanMotionDot     float64
 	MeanMotionDDot    float64
 	MeanMotionDDotExp int
@@ -55,7 +56,7 @@ func (t *TLE) GetElementSet() string {
 // GetOrbitalPeriod returns the orbital period in minutes
 func (t *TLE) GetOrbitalPeriod() float64 {
 	if t.MeanMotion > 0 {
-		return 1440.0 / t.MeanMotion // 1440 minutes per day
+		return 86400.0 / t.MeanMotion // Mean Motion in revolutions per day
 	}
 	return 0
 }

@@ -175,3 +175,117 @@ func TestTimeFunctions(t *testing.T) {
 		t.Errorf("Date conversion failed: expected %v, got %v", fixedTime.Format("2000-01-02"), time2.Format("2000-01-02"))
 	}
 }
+
+func TestSGP4Validation(t *testing.T) {
+	// Test TLE for ISS (same as in the user's image)
+	line1 := "1 25544U 98067A   25224.47423135  .00010254  00000+0  18430-3 0  9994"
+	line2 := "2 25544  51.6349  28.0780 0001172 181.8871 178.2114 15.50477111523893"
+
+	tle, err := sgp4go.ParseTLE(line1, line2)
+	if err != nil {
+		t.Fatalf("ParseTLE failed: %v", err)
+	}
+
+	// Expected values from the verified true solution
+	expectedEpoch := sgp4go.Vector{
+		X: 5995.284156,
+		Y: 3198.229573,
+		Z: 0.004114,
+	}
+	expectedEpochVel := sgp4go.Vector{
+		X: -2.243097,
+		Y: 4.190838,
+		Z: 6.009074,
+	}
+
+	expected92min := sgp4go.Vector{
+		X: 6113.259552,
+		Y: 2952.366194,
+		Z: -296.568462,
+	}
+	expected92minVel := sgp4go.Vector{
+		X: -1.838681,
+		Y: 4.395484,
+		Z: 5.999732,
+	}
+
+	// Test 1: Position at epoch
+	posEpoch, velEpoch, err := sgp4go.PropagateSatelliteInKilometers(tle, tle.JulianEpoch)
+	if err != nil {
+		t.Fatalf("PropagateSatellite at epoch failed: %v", err)
+	}
+
+	// Always show the values for comparison
+	t.Logf("=== EPOCH COMPARISON ===")
+	t.Logf("Expected Position: X=%f, Y=%f, Z=%f", expectedEpoch.X, expectedEpoch.Y, expectedEpoch.Z)
+	t.Logf("Got Position:      X=%f, Y=%f, Z=%f", posEpoch.X, posEpoch.Y, posEpoch.Z)
+	t.Logf("Position Diff:     X=%f, Y=%f, Z=%f", posEpoch.X-expectedEpoch.X, posEpoch.Y-expectedEpoch.Y, posEpoch.Z-expectedEpoch.Z)
+
+	t.Logf("Expected Velocity: X=%f, Y=%f, Z=%f", expectedEpochVel.X, expectedEpochVel.Y, expectedEpochVel.Z)
+	t.Logf("Got Velocity:      X=%f, Y=%f, Z=%f", velEpoch.X, velEpoch.Y, velEpoch.Z)
+	t.Logf("Velocity Diff:     X=%f, Y=%f, Z=%f", velEpoch.X-expectedEpochVel.X, velEpoch.Y-expectedEpochVel.Y, velEpoch.Z-expectedEpochVel.Z)
+
+	// Check epoch position with very strict tolerance
+	posError := math.Sqrt(math.Pow(posEpoch.X-expectedEpoch.X, 2) +
+		math.Pow(posEpoch.Y-expectedEpoch.Y, 2) +
+		math.Pow(posEpoch.Z-expectedEpoch.Z, 2))
+
+	if posError > 0.01 { // Allow 10m error (more realistic for SGP4)
+		t.Errorf("Epoch position error too large: %f km", posError)
+	}
+
+	// Check epoch velocity with very strict tolerance
+	velError := math.Sqrt(math.Pow(velEpoch.X-expectedEpochVel.X, 2) +
+		math.Pow(velEpoch.Y-expectedEpochVel.Y, 2) +
+		math.Pow(velEpoch.Z-expectedEpochVel.Z, 2))
+
+	if velError > 0.001 { // Allow 1 m/s error (more realistic for SGP4)
+		t.Errorf("Epoch velocity error too large: %f km/s", velError)
+	}
+
+	// Test 2: Position after 92 minutes
+	// Calculate the exact time for 92 minutes after epoch
+	epochTime := sgp4go.JulianToTimeAstronomical(tle.JulianEpoch)
+	time92min := epochTime.Add(time.Minute * 92)
+	jd92min := sgp4go.TimeToJulianDate(time92min)
+
+	pos92min, vel92min, err := sgp4go.PropagateSatelliteInKilometers(tle, jd92min)
+	if err != nil {
+		t.Fatalf("PropagateSatellite at 92min failed: %v", err)
+	}
+
+	// Always show the values for comparison
+	t.Logf("=== 92 MINUTES COMPARISON ===")
+	t.Logf("Expected Position: X=%f, Y=%f, Z=%f", expected92min.X, expected92min.Y, expected92min.Z)
+	t.Logf("Got Position:      X=%f, Y=%f, Z=%f", pos92min.X, pos92min.Y, pos92min.Z)
+	t.Logf("Position Diff:     X=%f, Y=%f, Z=%f", pos92min.X-expected92min.X, pos92min.Y-expected92min.Y, pos92min.Z-expected92min.Z)
+
+	t.Logf("Expected Velocity: X=%f, Y=%f, Z=%f", expected92minVel.X, expected92minVel.Y, expected92minVel.Z)
+	t.Logf("Got Velocity:      X=%f, Y=%f, Z=%f", vel92min.X, vel92min.Y, vel92min.Z)
+	t.Logf("Velocity Diff:     X=%f, Y=%f, Z=%f", vel92min.X-expected92minVel.X, vel92min.Y-expected92minVel.Y, vel92min.Z-expected92minVel.Z)
+
+	// Check 92min position with very strict tolerance
+	posError92 := math.Sqrt(math.Pow(pos92min.X-expected92min.X, 2) +
+		math.Pow(pos92min.Y-expected92min.Y, 2) +
+		math.Pow(pos92min.Z-expected92min.Z, 2))
+
+	if posError92 > 0.01 { // Allow 10m error (more realistic for SGP4)
+		t.Errorf("92min position error too large: %f km", posError92)
+	}
+
+	// Check 92min velocity with very strict tolerance
+	velError92 := math.Sqrt(math.Pow(vel92min.X-expected92minVel.X, 2) +
+		math.Pow(vel92min.Y-expected92minVel.Y, 2) +
+		math.Pow(vel92min.Z-expected92minVel.Z, 2))
+
+	if velError92 > 0.001 { // Allow 1 m/s error (more realistic for SGP4)
+		t.Errorf("92min velocity error too large: %f km/s", velError92)
+	}
+
+	// Debug output
+	t.Logf("Epoch time: %v", epochTime)
+	t.Logf("92min time: %v", time92min)
+	t.Logf("Epoch JD: %f", tle.JulianEpoch)
+	t.Logf("92min JD: %f", jd92min)
+	t.Logf("Time difference: %f minutes", (jd92min-tle.JulianEpoch)*1440.0)
+}

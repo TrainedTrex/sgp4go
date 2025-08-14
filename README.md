@@ -1,15 +1,15 @@
 # SGP4Go
 
-A Go implementation of the NORAD SGP4/SDP4 orbital propagation models, translated from the original Pascal code by Dr. TS Kelso.
+A Go implementation of the NORAD SGP4/SDP4 orbital propagation models, translated from the original code by David Vallado & Dr. TS Kelso.
 
 ## Features
 
 - **Complete SGP4/SDP4 Implementation**: Full translation of the NORAD orbital models
 - **TLE Parsing**: Parse standard Two-Line Element sets
 - **Multiple Propagation Methods**: Support for Julian dates, Go time.Time, and minutes since epoch
-- **User-Friendly API**: All fields publicly accessible with convenience methods
-- **Comprehensive Testing**: Unit tests and validation against known results
-- **Go Idioms**: Proper error handling, type safety, and modern Go patterns
+- **Units**: Returns both Earth radii and kilometers
+- **Testing**: Unit tests and validation against known results
+- **Go Idioms**: Go error handling, type safety, and modern Go coding patterns
 
 ## Installation
 
@@ -38,22 +38,30 @@ func main() {
         panic(err)
     }
 
-    // Access TLE fields (all publicly accessible!)
+    // Access TLE fields
     fmt.Printf("Satellite: %s\n", tle.SatelliteNumber)
     fmt.Printf("Epoch: %f\n", tle.Epoch)
-    fmt.Printf("Julian Epoch: %f\n", tle.JulianEpoch) // Equivalent to jdsatepoch
+    fmt.Printf("Julian Epoch: %f\n", tle.JulianEpoch)
     fmt.Printf("Inclination: %f degrees\n", tle.Inclination)
     fmt.Printf("Orbital Period: %f minutes\n", tle.GetOrbitalPeriod())
 
     // Propagate using different methods
     now := time.Now()
     
-    // Method 1: Using Go time.Time
+    // Method 1: Using Go time.Time (returns Earth radii)
     pos, vel, err := sgp4.PropagateSatelliteFromTime(tle, now)
     if err != nil {
         panic(err)
     }
-    fmt.Printf("Position: X=%f, Y=%f, Z=%f km\n", pos.X, pos.Y, pos.Z)
+    fmt.Printf("Position (Earth radii): X=%f, Y=%f, Z=%f\n", pos.X, pos.Y, pos.Z)
+    
+    // Method 2: Using Go time.Time with automatic conversion to kilometers
+    posKm, velKm, err := sgp4.PropagateSatelliteFromTimeInKilometers(tle, now)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("Position (km): X=%f, Y=%f, Z=%f\n", posKm.X, posKm.Y, posKm.Z)
+    fmt.Printf("Velocity (km/s): X=%f, Y=%f, Z=%f\n", velKm.X, velKm.Y, velKm.Z)
 }
 ```
 
@@ -61,13 +69,11 @@ func main() {
 
 ### TLE Struct
 
-All fields are publicly accessible:
-
 ```go
 type TLE struct {
     SatelliteNumber   string  // Satellite catalog number
     Epoch             float64 // TLE epoch (year + day of year)
-    JulianEpoch       float64 // Julian date of epoch (equivalent to jdsatepoch)
+    JulianEpoch       float64 // Julian date of epoch
     MeanMotionDot     float64 // First derivative of mean motion
     MeanMotionDDot    float64 // Second derivative of mean motion
     MeanMotionDDotExp int     // Exponent for MeanMotionDDot
@@ -144,6 +150,13 @@ func PropagateSatelliteFromTime(tle *TLE, t time.Time) (Vector, Vector, error)
 func PropagateSatelliteFromMinutes(tle *TLE, minutesSinceEpoch float64) (Vector, Vector, error)
 ```
 
+#### Propagation in Kilometers (High-Level)
+```go
+func PropagateSatelliteInKilometers(tle *TLE, time float64) (Vector, Vector, error)
+func PropagateSatelliteFromTimeInKilometers(tle *TLE, t time.Time) (Vector, Vector, error)
+func PropagateSatelliteFromMinutesInKilometers(tle *TLE, minutesSinceEpoch float64) (Vector, Vector, error)
+```
+
 #### Propagation (Low-Level)
 ```go
 func SGP(time float64, sat *SatelliteData) (Vector, Vector, error)
@@ -164,6 +177,7 @@ func MinutesSinceEpoch(julianEpoch, julianDate float64) float64
 #### Mathematical Functions
 ```go
 func Sign(arg float64) int
+func Square(arg float64) float64
 func Cube(arg float64) float64
 func Power(arg, pwr float64) float64
 func Radians(arg float64) float64
@@ -188,12 +202,18 @@ func Cross(v1, v2 Vector) Vector
 func Normalize(v *Vector)
 ```
 
+#### Unit Conversions
+```go
+func ConvertPositionToKilometers(pos *Vector)
+func ConvertVelocityToKilometersPerSecond(vel *Vector)
+func ConvertPositionAndVelocityToKilometers(pos, vel *Vector)
+```
+
 ## Examples
 
 See the `examples/` directory for complete examples:
 
 - `main.go` - Basic usage example
-- `user_friendly_example.go` - Demonstrates all accessible fields and methods
 
 ## Testing
 
@@ -205,7 +225,7 @@ go test ./tests/...
 
 ## Implementation Notes
 
-This is a direct translation from the original SGP4/SDP4 implementation by David vallado and Dr. TS Kelso. The code maintains the same algorithms and numerical precision as the original while taking advantage of Go's type safety and error handling.
+This is a direct translation from the original SGP4/SDP4 implementation by David vallado and Dr. TS Kelso. The code maintains the same algorithms and numerical operations as the original while taking advantage of Go's type safety and error handling.
 
 ## License
 

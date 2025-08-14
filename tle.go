@@ -50,7 +50,7 @@ func ParseTLE(line1, line2 string) (*TLE, error) {
 		tle.MeanMotionDDotExp = exp
 	}
 
-	// Parse B* (with exponent)
+	// Parse B*
 	// Format: 6 digits followed by exponent in next 2 positions
 	bstarStr := line1[53:59]
 	bstarExpStr := strings.TrimSpace(line1[59:61])
@@ -149,7 +149,7 @@ func ConvertSatelliteData(tle *TLE) (*SatelliteData, error) {
 	sat.XMO = Radians(tle.MeanAnomaly)
 	sat.XIncl = Radians(tle.Inclination)
 	sat.XNO = tle.MeanMotion * TWOPI / XMNPDA
-	sat.XNDT2O = tle.MeanMotionDot * TWOPI / (XMNPDA * XMNPDA)
+	sat.XNDT2O = tle.MeanMotionDot * TWOPI / Square(XMNPDA)
 	sat.XNDD6O = sat.XNDD6O * TWOPI / Cube(XMNPDA)
 	sat.EO = tle.Eccentricity
 	sat.JulianEpoch = tle.JulianEpoch

@@ -297,7 +297,7 @@ func PropagateSatellite(tle *TLE, time float64) (Vector, Vector, error) {
 	return SGP(time, sat)
 }
 
-// PropagateSatelliteFromTime is a convenience function that takes a TLE and a Go time.Time
+// PropagateSatelliteFromTime is a function that takes a TLE and a Go time.Time
 // and returns the satellite's position and velocity at that time
 func PropagateSatelliteFromTime(tle *TLE, t time.Time) (Vector, Vector, error) {
 	if tle == nil {
@@ -326,4 +326,27 @@ func PropagateSatelliteFromMinutes(tle *TLE, minutesSinceEpoch float64) (Vector,
 
 	// Use SGP4 directly with minutes since epoch
 	return SGP4(minutesSinceEpoch, sat)
+}
+
+// PropagateSatelliteInKilometers is a function that returns position and velocity in kilometers
+func PropagateSatelliteInKilometers(tle *TLE, time float64) (Vector, Vector, error) {
+	pos, vel, err := PropagateSatellite(tle, time)
+	if err != nil {
+		return Vector{}, Vector{}, err
+	}
+
+	ConvertPositionAndVelocityToKilometers(&pos, &vel)
+	return pos, vel, nil
+}
+
+// PropagateSatelliteFromTimeInKilometers is a function that takes a TLE and a Go time.Time
+// and returns the satellite's position and velocity in kilometers
+func PropagateSatelliteFromTimeInKilometers(tle *TLE, t time.Time) (Vector, Vector, error) {
+	pos, vel, err := PropagateSatelliteFromTime(tle, t)
+	if err != nil {
+		return Vector{}, Vector{}, err
+	}
+
+	ConvertPositionAndVelocityToKilometers(&pos, &vel)
+	return pos, vel, nil
 }

@@ -19,6 +19,11 @@ func Cube(arg float64) float64 {
 	return arg * arg * arg
 }
 
+// Square returns the square of a number
+func Square(arg float64) float64 {
+	return arg * arg
+}
+
 // Power returns arg raised to the power pwr
 func Power(arg, pwr float64) float64 {
 	if arg > 0 {
@@ -194,4 +199,26 @@ func RMax(arg1, arg2 float64) float64 {
 		return arg1
 	}
 	return arg2
+}
+
+// ConvertPositionToKilometers converts position from Earth radii to kilometers
+func ConvertPositionToKilometers(pos *Vector) {
+	pos.X *= XKMPER
+	pos.Y *= XKMPER
+	pos.Z *= XKMPER
+	Magnitude(pos)
+}
+
+// ConvertVelocityToKilometersPerSecond converts velocity from Earth radii/minute to kilometers/second
+func ConvertVelocityToKilometersPerSecond(vel *Vector) {
+	vel.X *= XKMPER / 60.0
+	vel.Y *= XKMPER / 60.0
+	vel.Z *= XKMPER / 60.0
+	Magnitude(vel)
+}
+
+// ConvertPositionAndVelocityToKilometers converts both position and velocity to kilometers
+func ConvertPositionAndVelocityToKilometers(pos, vel *Vector) {
+	ConvertPositionToKilometers(pos)
+	ConvertVelocityToKilometersPerSecond(vel)
 }

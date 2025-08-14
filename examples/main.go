@@ -19,6 +19,11 @@ func main() {
 		return
 	}
 
+	fmt.Println("tle.Epoch", tle.Epoch)
+	fmt.Println("tle.JulianEpoch", tle.JulianEpoch)
+	fmt.Println("tle.Epoch", sgp4go.JulianDateToTime(tle.JulianEpoch))
+	fmt.Println("tle.Epoch", sgp4go.JulianToTimeAstronomical(tle.JulianEpoch))
+
 	// Demonstrate accessing TLE fields
 	fmt.Printf("Satellite Number: %s\n", tle.SatelliteNumber)
 	fmt.Printf("Epoch: %f\n", tle.Epoch)
@@ -45,36 +50,50 @@ func main() {
 
 	fmt.Printf("\nPropagation Examples:\n")
 
-	pos1, _, err := sgp4go.PropagateSatellite(tle, tle.JulianEpoch)
+	pos1, vel1, err := sgp4go.PropagateSatellite(tle, tle.JulianEpoch)
 	if err != nil {
 		fmt.Printf("Error propagating satellite: %v\n", err)
 		return
 	}
-	fmt.Printf("Position at epoch: X=%f, Y=%f, Z=%f km\n", pos1.X, pos1.Y, pos1.Z)
+	fmt.Printf("Position at epoch (Earth radii): X=%f, Y=%f, Z=%f\n", pos1.X, pos1.Y, pos1.Z)
+	fmt.Printf("Velocity at epoch (Earth radii/min): X=%f, Y=%f, Z=%f\n", vel1.X, vel1.Y, vel1.Z)
+	// Convert to kilometers
+	sgp4go.ConvertPositionToKilometers(&pos1)
+	sgp4go.ConvertVelocityToKilometersPerSecond(&vel1)
+	fmt.Printf("Position at epoch (kilometers): X=%f, Y=%f, Z=%f\n", pos1.X, pos1.Y, pos1.Z)
+	fmt.Printf("Velocity at epoch (km/s): X=%f, Y=%f, Z=%f\n", vel1.X, vel1.Y, vel1.Z)
 
-	now := time.Now()
-	pos2, _, err := sgp4go.PropagateSatelliteFromTime(tle, now)
+	jnow := sgp4go.JulianToTimeAstronomical(tle.JulianEpoch)
+	fmt.Println("jnow", tle.JulianEpoch)
+	fmt.Println("jnow", jnow)
+	jnowJul := sgp4go.TimeToJulianDate(jnow.Add(time.Minute * 92))
+	fmt.Println("jnowJul", jnowJul)
+	pos2, vel2, err := sgp4go.PropagateSatellite(tle, jnowJul)
 	if err != nil {
 		fmt.Printf("Error propagating satellite: %v\n", err)
 		return
 	}
-	fmt.Printf("Position now: X=%f, Y=%f, Z=%f km\n", pos2.X, pos2.Y, pos2.Z)
+	fmt.Printf("Position now (Earth radii): X=%f, Y=%f, Z=%f\n", pos2.X, pos2.Y, pos2.Z)
+	fmt.Printf("Velocity now (Earth radii/min): X=%f, Y=%f, Z=%f\n", vel2.X, vel2.Y, vel2.Z)
 
-	minutesSinceEpoch := 1440.0 // 1 day after epoch
-	pos3, _, err := sgp4go.PropagateSatelliteFromMinutes(tle, minutesSinceEpoch)
+	// Convert to kilometers using convenience functions - FIXED: use 92min time instead of now
+	time92min := jnow.Add(time.Minute * 92)
+	pos2Km, vel2Km, err := sgp4go.PropagateSatelliteFromTimeInKilometers(tle, time92min)
 	if err != nil {
 		fmt.Printf("Error propagating satellite: %v\n", err)
 		return
 	}
-	fmt.Printf("Position 1 day after epoch: X=%f, Y=%f, Z=%f km\n", pos3.X, pos3.Y, pos3.Z)
+	fmt.Printf("Position now (kilometers): X=%f, Y=%f, Z=%f\n", pos2Km.X, pos2Km.Y, pos2Km.Z)
+	fmt.Printf("Velocity now (km/s): X=%f, Y=%f, Z=%f\n", vel2Km.X, vel2Km.Y, vel2Km.Z)
 
 	fmt.Printf("\nAll Accessible Fields:\n")
 	fmt.Printf("TLE.SatelliteNumber: %s\n", tle.SatelliteNumber)
 	fmt.Printf("TLE.Epoch: %f\n", tle.Epoch)
-	fmt.Printf("TLE.JulianEpoch: %f (equivalent to jdsatepoch)\n", tle.JulianEpoch)
+	fmt.Printf("TLE.JulianEpoch: %f\n", tle.JulianEpoch)
 	fmt.Printf("TLE.MeanMotionDot: %f\n", tle.MeanMotionDot)
 	fmt.Printf("TLE.MeanMotionDDot: %f\n", tle.MeanMotionDDot)
 	fmt.Printf("TLE.BStar: %f\n", tle.BStar)
+	fmt.Printf("TLE.BStarExp: %d\n", tle.BStarExp)
 	fmt.Printf("TLE.ElementSet: %s\n", tle.ElementSet)
 	fmt.Printf("TLE.Inclination: %f\n", tle.Inclination)
 	fmt.Printf("TLE.RightAscension: %f\n", tle.RightAscension)
@@ -92,6 +111,8 @@ func main() {
 	fmt.Printf("Sat.XNO: %f\n", sat.XNO)
 	fmt.Printf("Sat.JulianEpoch: %f\n", sat.JulianEpoch)
 	fmt.Printf("Sat.XKE: %f\n", sat.XKE)
+	fmt.Printf("Sat.BStar: %f\n", sat.BStar)
+	fmt.Printf("Sat.Eccentricity: %f\n", sat.EO)
 	fmt.Printf("Sat.IFlag: %d\n", sat.IFlag)
 	fmt.Printf("Sat.IDeep: %d\n", sat.IDeep)
 }

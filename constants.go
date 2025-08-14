@@ -38,7 +38,7 @@ const (
 
 // Mathematical constants
 const (
-	PI = 3.14159265358979323846 // π
+	PI = 3.14159265358979323846264338327950288419716939937510582097494459 // https://oeis.org/A000796
 )
 
 // Maximum number of satellites that can be stored
