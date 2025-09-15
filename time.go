@@ -167,8 +167,11 @@ func TimeToJulianDate(t time.Time) float64 {
 	month := int(t.Month())
 	day := t.Day()
 
+	// Include nanoseconds for full precision
+	totalSeconds := float64(t.Second()) + float64(t.Nanosecond())/1e9
+
 	return JulianDate(year, month, day) + float64(t.Hour())/24.0 +
-		float64(t.Minute())/1440.0 + float64(t.Second())/86400.0
+		float64(t.Minute())/1440.0 + totalSeconds/86400.0
 }
 
 // DaysSinceEpoch calculates the number of days since the TLE epoch
