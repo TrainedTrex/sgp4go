@@ -9,7 +9,7 @@ Yet another SGP4 port. This is a Go implementation of the NORAD SGP4/SDP4 orbita
 - **Complete SGP4/SDP4 Implementation**: Full translation of the NORAD orbital models
 - **TLE Parsing**: Parse standard Two-Line Element sets
 - **Simple Propagation API**: Single function with optional units parameter
-- **Flexible Units**: Optional units parameter - Earth radii (default) or kilometers
+- **Units**: Optional units parameter - Earth radii (default) or kilometers
 - **Testing**: Unit tests and validation against known results
 - **Go Idioms**: Go error handling, type safety, and modern Go coding patterns
 
