@@ -16,7 +16,8 @@ type State struct {
 // TLE represents a Two-Line Element set
 type TLE struct {
 	SatelliteNumber   string
-	Epoch             float64
+	CatalogNumber     int
+	Epoch            float64
 	JulianEpoch       float64
 	GregorianEpoch    time.Time
 	MeanMotionDot     float64
