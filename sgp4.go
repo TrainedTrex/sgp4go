@@ -1110,13 +1110,10 @@ func SGP4(satrec *ElsetRec, tsince float64, r, v []float64) bool {
 	satrec.Mm = math.Mod(xlm-satrec.Argpm-satrec.Nodem, TWOPI_C)
 
 	// sgp4fix recover singly averaged mean elements
-	satrec.Am = satrec.Am //nolint:ineffassign
-	satrec.Em = satrec.Em //nolint:ineffassign
+	// (Am, Em, Mm, Nm already live on satrec in this port)
 	satrec.Im = satrec.Inclm
 	satrec.Om = satrec.Nodem
 	satrec.Om2 = satrec.Argpm
-	satrec.Mm = satrec.Mm //nolint:ineffassign
-	satrec.Nm = satrec.Nm //nolint:ineffassign
 
 	// Compute extra mean quantities
 	satrec.Sinim = math.Sin(satrec.Inclm)
@@ -1275,6 +1272,8 @@ func PropagateSatellite(tle *TLE, time float64, units ...string) (Vector, Vector
 	// Apply BStar exponent like C code does
 	bstarWithExp := tle.BStar * math.Pow(10.0, float64(tle.BStarExp))
 
+	// MeanMotionDDotExp is not applied here. Vallado SGP4 never reads nddot.
+	// If a model that uses nddot is added, multiply by 10^MeanMotionDDotExp.
 	satrec := &ElsetRec{
 		WhichConst:  WGS72,
 		Jdsatepoch:  tle.JulianEpoch,
