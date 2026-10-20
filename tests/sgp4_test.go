@@ -406,3 +406,137 @@ func TestSGP4ValidationGEO(t *testing.T) {
 	t.Logf("92min JD: %f", jd92min)
 	t.Logf("Time difference: %f minutes", (jd92min-tle.JulianEpoch)*1440.0)
 }
+
+func TestParseCatalogNumber(t *testing.T) {
+	valid := map[string]int{
+		"25544": 25544, "00005": 5, "A0000": 100000, "E8493": 148493, "J2931": 182931,
+		"P4018": 234018, "W1928": 301928, "Z9999": 339999, "A5544": 105544,
+	}
+	for in, want := range valid {
+		got, err := sgp4go.ParseCatalogNumber(in)
+		if err != nil || got != want {
+			t.Errorf("ParseCatalogNumber(%q) = %d, %v; want %d", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"I0000", "O0000", "a0000", "", "A12", "A-123", "AB123"} {
+		if got, err := sgp4go.ParseCatalogNumber(in); err == nil {
+			t.Errorf("ParseCatalogNumber(%q) = %d; want error", in, got)
+		}
+	}
+}
+
+// STARLINK-38128 from Space-Track, catalog 100001.
+const (
+	alpha5Line1 = "1 A0001U 26160A   26292.49601580  .00017582  00000-0  59884-3 0  9990"
+	alpha5Line2 = "2 A0001  69.9982 117.4636 0002463 271.8593  88.2301 15.30428694 16443"
+	alpha5OMM   = `[{
+    "CCSDS_OMM_VERS": "3.0",
+    "COMMENT": "GENERATED VIA SPACE-TRACK.ORG API",
+    "CREATION_DATE": "2026-10-20T03:35:07",
+    "ORIGINATOR": "18 SPCS",
+    "OBJECT_NAME": "STARLINK-38128",
+    "OBJECT_ID": "2026-160A",
+    "CENTER_NAME": "EARTH",
+    "REF_FRAME": "TEME",
+    "TIME_SYSTEM": "UTC",
+    "MEAN_ELEMENT_THEORY": "SGP4",
+    "EPOCH": "2026-10-19T11:54:15.765120",
+    "MEAN_MOTION": "15.30428694",
+    "ECCENTRICITY": "0.00024627",
+    "INCLINATION": "69.9982",
+    "RA_OF_ASC_NODE": "117.4636",
+    "ARG_OF_PERICENTER": "271.8593",
+    "MEAN_ANOMALY": "88.2301",
+    "EPHEMERIS_TYPE": "0",
+    "CLASSIFICATION_TYPE": "U",
+    "NORAD_CAT_ID": "100001",
+    "ELEMENT_SET_NO": "999",
+    "REV_AT_EPOCH": "1644",
+    "BSTAR": "0.00059883618000",
+    "MEAN_MOTION_DOT": "0.00017582",
+    "MEAN_MOTION_DDOT": "0.0000000000000",
+    "SEMIMAJOR_AXIS": "6852.669",
+    "PERIOD": "94.091",
+    "APOAPSIS": "476.222",
+    "PERIAPSIS": "472.847",
+    "OBJECT_TYPE": "PAYLOAD",
+    "RCS_SIZE": "LARGE",
+    "COUNTRY_CODE": "US",
+    "LAUNCH_DATE": "2026-07-14",
+    "SITE": "AFWTR",
+    "DECAY_DATE": null,
+    "FILE": "5394817",
+    "GP_ID": "353519337",
+    "TLE_LINE0": "0 STARLINK-38128",
+    "TLE_LINE1": "1 A0001U 26160A   26292.49601580  .00017582  00000-0  59884-3 0  9990",
+    "TLE_LINE2": "2 A0001  69.9982 117.4636 0002463 271.8593  88.2301 15.30428694 16443"
+  }]`
+	// Same record, CelesTrak style: numeric values, single object.
+	alpha5OMMNumeric = `{"OBJECT_NAME":"STARLINK-38128","OBJECT_ID":"2026-160A","EPOCH":"2026-10-19T11:54:15.765120",
+    "MEAN_MOTION":15.30428694,"ECCENTRICITY":0.00024627,"INCLINATION":69.9982,"RA_OF_ASC_NODE":117.4636,
+    "ARG_OF_PERICENTER":271.8593,"MEAN_ANOMALY":88.2301,"EPHEMERIS_TYPE":0,"CLASSIFICATION_TYPE":"U",
+    "NORAD_CAT_ID":100001,"ELEMENT_SET_NO":999,"REV_AT_EPOCH":1644,"BSTAR":0.00059883618,
+    "MEAN_MOTION_DOT":0.00017582,"MEAN_MOTION_DDOT":0}`
+)
+
+func TestParseTLEAlpha5(t *testing.T) {
+	tle, err := sgp4go.ParseTLE(alpha5Line1, alpha5Line2)
+	if err != nil {
+		t.Fatalf("ParseTLE failed: %v", err)
+	}
+	if tle.CatalogNumber != 100001 || tle.SatelliteNumber != "A0001" {
+		t.Errorf("got CatalogNumber=%d SatelliteNumber=%q; want 100001, \"A0001\"", tle.CatalogNumber, tle.SatelliteNumber)
+	}
+}
+
+func TestOMMMatchesTLE(t *testing.T) {
+	tle, err := sgp4go.ParseTLE(alpha5Line1, alpha5Line2)
+	if err != nil {
+		t.Fatalf("ParseTLE failed: %v", err)
+	}
+	oms, err := sgp4go.ParseOMM([]byte(alpha5OMM))
+	if err != nil {
+		t.Fatalf("ParseOMM failed: %v", err)
+	}
+	if len(oms) != 1 {
+		t.Fatalf("expected 1 OMM record, got %d", len(oms))
+	}
+	om := oms[0]
+	if om.NoradCatID != 100001 || om.ObjectName != "STARLINK-38128" {
+		t.Errorf("got NoradCatID=%d ObjectName=%q", om.NoradCatID, om.ObjectName)
+	}
+	wantEpoch := time.Date(2026, 10, 19, 11, 54, 15, 765120000, time.UTC)
+	if !om.Epoch.Equal(wantEpoch) {
+		t.Errorf("Epoch = %v; want %v", om.Epoch, wantEpoch)
+	}
+
+	ommTLE := om.TLE()
+	if ommTLE.CatalogNumber != tle.CatalogNumber {
+		t.Errorf("CatalogNumber %d != TLE %d", ommTLE.CatalogNumber, tle.CatalogNumber)
+	}
+	if d := math.Abs(ommTLE.JulianEpoch - tle.JulianEpoch); d > 1e-8 {
+		t.Errorf("JulianEpoch differs by %g days", d)
+	}
+
+	jd := tle.JulianEpoch + 90.0/1440.0
+	p1, _, err := sgp4go.PropagateSatellite(tle, jd, "km")
+	if err != nil {
+		t.Fatalf("TLE propagate: %v", err)
+	}
+	p2, _, err := sgp4go.PropagateSatellite(ommTLE, jd, "km")
+	if err != nil {
+		t.Fatalf("OMM propagate: %v", err)
+	}
+	// OMM carries more digits than the TLE (BSTAR, ECCENTRICITY), so allow a small gap.
+	if d := math.Sqrt(math.Pow(p1.X-p2.X, 2) + math.Pow(p1.Y-p2.Y, 2) + math.Pow(p1.Z-p2.Z, 2)); d > 0.1 {
+		t.Errorf("TLE vs OMM position differs by %f km", d)
+	}
+
+	num, err := sgp4go.ParseOMM([]byte(alpha5OMMNumeric))
+	if err != nil {
+		t.Fatalf("ParseOMM numeric failed: %v", err)
+	}
+	if *num[0].TLE() != *ommTLE {
+		t.Errorf("numeric OMM TLE %+v != string OMM TLE %+v", *num[0].TLE(), *ommTLE)
+	}
+}
