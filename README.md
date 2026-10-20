@@ -7,7 +7,8 @@ Yet another SGP4 port. This is a Go implementation of the NORAD SGP4/SDP4 orbita
 ## Features
 
 - **Complete SGP4/SDP4 Implementation**: Full translation of the NORAD orbital models
-- **TLE Parsing**: Parse standard Two-Line Element sets
+- **TLE Parsing**: Parse standard Two-Line Element sets, including Alpha-5 catalog numbers (`A0001` → 100001)
+- **OMM Input**: Propagate from OMM JSON, no 5-digit catalog limit
 - **Simple Propagation API**: Single function with optional units parameter
 - **Units**: Optional units parameter - Earth radii (default) or kilometers
 - **Testing**: Unit tests and validation against known results
@@ -76,7 +77,8 @@ func main() {
 
 ```go
 type TLE struct {
-    SatelliteNumber   string  // Satellite catalog number
+    SatelliteNumber   string  // Satellite catalog number as written in the TLE (may be Alpha-5, e.g. "A0001")
+    CatalogNumber     int     // Numeric NORAD catalog number (Alpha-5 decoded, e.g. 100001)
     Epoch             float64 // TLE epoch (year + day of year)
     JulianEpoch       float64 // Julian date of epoch
     MeanMotionDot     float64 // First derivative of mean motion
@@ -95,6 +97,7 @@ type TLE struct {
 ```
 
 **Convenience Methods:**
+
 - `GetJulianEpoch() float64` - Returns Julian epoch
 - `GetEpoch() float64` - Returns TLE epoch
 - `GetSatelliteNumber() string` - Returns satellite number
@@ -127,6 +130,7 @@ type SatelliteData struct {
 ```
 
 **Convenience Methods:**
+
 - `GetJulianEpoch() float64` - Returns Julian epoch
 - `GetOrbitalPeriod() float64` - Returns orbital period in minutes
 - `IsDeepSpace() bool` - Returns true if deep space model is needed
@@ -137,17 +141,34 @@ type SatelliteData struct {
 ### Main Functions
 
 #### TLE Parsing
+
 ```go
 func ParseTLE(line1, line2 string) (*TLE, error)
+func ParseCatalogNumber(s string) (int, error) // "25544" -> 25544, "A0001" -> 100001
 func ParseFloat(s string) (float64, error)
 ```
 
+#### OMM Parsing
+
+```go
+func ParseOMM(data []byte) ([]OMM, error) // JSON array or single object; numeric or quoted values
+func (o OMM) TLE() *TLE                   // convert for use with PropagateSatellite
+```
+
+```go
+oms, err := sgp4.ParseOMM(jsonBytes)
+tle := oms[0].TLE()
+pos, vel, err := sgp4.PropagateSatellite(tle, jd, "km")
+```
+
 #### Satellite Data Conversion
+
 ```go
 func ConvertSatelliteData(tle *TLE) (*SatelliteData, error)
 ```
 
 #### Propagation (High-Level)
+
 ```go
 func PropagateSatellite(tle *TLE, time float64, units ...string) (Vector, Vector, error)
 ```
@@ -155,6 +176,7 @@ func PropagateSatellite(tle *TLE, time float64, units ...string) (Vector, Vector
 **Note:** The `units` parameter is optional. Pass `"km"` to get results in kilometers, or omit for Earth radii (default). For time.Time objects, use `TimeToJulianDate()` to convert first.
 
 #### Propagation (Low-Level)
+
 ```go
 func SGP(time float64, sat *SatelliteData) (Vector, Vector, error)
 func SGP4(tsince float64, sat *SatelliteData) (Vector, Vector, error)
@@ -162,6 +184,7 @@ func SDP4(tsince float64, sat *SatelliteData) (Vector, Vector, error)
 ```
 
 #### Time Conversions
+
 ```go
 func JulianDateOfEpoch(epoch float64) float64
 func JulianDate(year, month, day int) float64
@@ -172,6 +195,7 @@ func MinutesSinceEpoch(julianEpoch, julianDate float64) float64
 ```
 
 #### Mathematical Functions
+
 ```go
 func Sign(arg float64) int
 func Square(arg float64) float64
@@ -188,6 +212,7 @@ func AcTan(sinx, cosx float64) float64
 ```
 
 #### Vector Operations
+
 ```go
 func Magnitude(v *Vector)
 func VecAdd(v1, v2 Vector) Vector
@@ -200,6 +225,7 @@ func Normalize(v *Vector)
 ```
 
 #### Unit Conversions
+
 ```go
 func ConvertPositionToKilometers(pos *Vector)
 func ConvertVelocityToKilometersPerSecond(vel *Vector)
@@ -211,6 +237,7 @@ func ConvertPositionAndVelocityToKilometers(pos, vel *Vector)
 See the `examples/` directory for complete examples:
 
 - `main.go` - Basic usage example
+- `omm/main.go` - Propagating from OMM JSON, plus the matching Alpha-5 TLE (`go run ./examples/omm`)
 
 ## Testing
 

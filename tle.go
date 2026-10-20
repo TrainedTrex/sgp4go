@@ -22,6 +22,10 @@ func ParseTLE(line1, line2 string) (*TLE, error) {
 	// Parse line 1
 	var err error
 	tle.SatelliteNumber = strings.TrimSpace(line1[2:7])
+	tle.CatalogNumber, err = ParseCatalogNumber(line1[2:7])
+	if err != nil {
+		return nil, fmt.Errorf("error parsing catalog number: %v", err)
+	}
 
 	tle.Epoch, err = ParseFloat(line1[18:32])
 	if err != nil {
@@ -113,6 +117,34 @@ func ParseTLE(line1, line2 string) (*TLE, error) {
 	tle.JulianEpoch = JulianDateOfEpoch(tle.Epoch)
 
 	return tle, nil
+}
+
+// ParseCatalogNumber decodes a TLE catalog number field, including Alpha-5
+// ("A5544" -> 105544). Alpha-5 letters map A=10 .. Z=33, skipping I and O.
+func ParseCatalogNumber(s string) (int, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty catalog number")
+	}
+	c := s[0]
+	if c < 'A' || c > 'Z' {
+		return strconv.Atoi(s)
+	}
+	if c == 'I' || c == 'O' || len(s) != 5 {
+		return 0, fmt.Errorf("invalid Alpha-5 catalog number %q", s)
+	}
+	rest, err := strconv.Atoi(s[1:])
+	if err != nil || s[1] < '0' || s[1] > '9' {
+		return 0, fmt.Errorf("invalid Alpha-5 catalog number %q", s)
+	}
+	v := int(c-'A') + 10
+	if c > 'I' {
+		v--
+	}
+	if c > 'O' {
+		v--
+	}
+	return v*10000 + rest, nil
 }
 
 // ParseFloat parses a float from a string, handling various formats
